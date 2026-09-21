@@ -5,6 +5,15 @@ import { ChevronDown, ExternalLink, LogOut, WalletCards } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useWallet } from "@/app/providers";
+import { assetUrl } from "@/lib/paths";
+
+function WalletIcon({ name, providerIcon }: { name: string; providerIcon?: string }) {
+  const [failed, setFailed] = useState(false);
+  const brand = name.toLowerCase().replace(/[^a-z]/g, '');
+  const known = brand.includes('phantom') ? 'phantom' : brand.includes('metamask') ? 'metamask' : null;
+  const icon = known ? assetUrl(`wallets/${known}.svg`) : providerIcon;
+  return <span className={`wallet-logo ${known || 'other'}`}>{icon && !failed ? <img src={icon} alt="" width={42} height={42} onError={() => setFailed(true)}/> : <WalletCards size={22}/>}</span>;
+}
 
 function short(value: string) { return `${value.slice(0,4)}…${value.slice(-4)}`; }
 
@@ -29,7 +38,7 @@ export function WalletButton() {
         <div className="wallet-options">
           {options.map((option) => (
             <button key={option.id} type="button" disabled={connecting} onClick={() => void connect(option.id).then((connected) => { if (connected) setOpen(false); })}>
-              <span className={`wallet-logo ${option.id}`}><WalletCards size={22} /></span><span><b>{option.name}</b><small>{option.provider ? "Detected" : "Install wallet"}</small></span>{!option.provider && <ExternalLink size={16} />}
+              <WalletIcon name={option.name} providerIcon={option.provider?.icon}/><span><b>{option.name}</b><small>{option.provider ? "Detected" : "Install wallet"}</small></span>{!option.provider && <ExternalLink size={16} />}
             </button>
           ))}
         </div>

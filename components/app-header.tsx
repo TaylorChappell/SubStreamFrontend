@@ -23,7 +23,7 @@ export function AppHeader() {
   const navigate = (path: string) => { setSearchOpen(false); router.push(path); };
   return <>
     <header className="site-header">
-      <Link href="/" className="brand" aria-label="Sub Stream home"><img src={assetUrl("sub-stream-mark.png")} alt="" width={48} height={48} /><span>SUB <b>STREAM</b></span></Link>
+      <Link href="/" className="brand" aria-label="Sub Stream home"><img src={assetUrl("sub-stream-logo.png")} alt="" width={48} height={48} /><span>SUB <b>STREAM</b></span></Link>
       <nav aria-label="Primary navigation">
         <Link className={pathname === "/" ? "nav-active" : ""} href="/">Explore</Link>
         <Link className={pathname.startsWith("/following") ? "nav-active" : ""} href="/following">Following</Link>

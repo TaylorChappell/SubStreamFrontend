@@ -138,7 +138,13 @@ footer { min-height: 100px; display: flex; align-items: center; gap: 24px; paddi
 .wallet-options { display: grid; gap: 10px; margin-top: 10px; }
 .wallet-options > button { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 13px; min-height: 66px; padding: 10px 14px; border: 1px solid #c5dfed; border-radius: 12px; color: #123e5a; background: #f7fcff; text-align: left; }
 .wallet-options > button:hover { border-color: #547a94; background: #c5dfed; }
-.wallet-logo { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; color: #f7fcff; background: #ab9ff2; }.wallet-logo.metamask { background: #b83e42; }
+.wallet-logo { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 11px; overflow: hidden; color: #547a94; background: #edf7fd; }
+.wallet-logo img { width: 42px; height: 42px; object-fit: contain; }
+.wallet-logo.phantom { background: #ab9ff2; }
+.wallet-logo.metamask { background: #fff3e9; }
+.wallet-logo.metamask img { width: 32px; height: 32px; }
+.footer-brand { display: inline-flex; align-items: center; gap: 9px; }
+.footer-brand img { object-fit: contain; flex-shrink: 0; }
 .wallet-options b,.wallet-options small { display: block; }.wallet-options b { font-size: 15px; }.wallet-options small { margin-top: 3px; color: #547a94; font-size: 12px; }
 .wallet-note { margin: 4px 0 0; color: #547a94; font-size: 12px; line-height: 1.5; }
 
