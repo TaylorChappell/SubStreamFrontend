@@ -28,7 +28,7 @@ export function WalletButton() {
         <DialogHeader><DialogTitle>Connect a Solana wallet</DialogTitle><DialogDescription>Sign a message to use holder chat and creator tools. Connecting costs nothing.</DialogDescription></DialogHeader>
         <div className="wallet-options">
           {options.map((option) => (
-            <button key={option.id} type="button" onClick={() => void connect(option.id).then(() => setOpen(false))}>
+            <button key={option.id} type="button" disabled={connecting} onClick={() => void connect(option.id).then((connected) => { if (connected) setOpen(false); })}>
               <span className={`wallet-logo ${option.id}`}><WalletCards size={22} /></span><span><b>{option.name}</b><small>{option.provider ? "Detected" : "Install wallet"}</small></span>{!option.provider && <ExternalLink size={16} />}
             </button>
           ))}

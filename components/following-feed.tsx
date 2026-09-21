@@ -1,40 +1,17 @@
 "use client";
-
-import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
-import { ArrowUpRight, Bell, LoaderCircle, Radio, Users } from "lucide-react";
-import { useWallet } from "@/app/providers";
-import { FollowButton } from "@/components/follow-button";
-import { apiFetch, API_CONFIGURED } from "@/lib/api";
-import { demoStreams, streamColors } from "@/lib/demo-data";
-import type { Stream } from "@/lib/types";
-
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useWallet } from '@/app/providers';
+import { apiFetch } from '@/lib/api';
+import type { Stream } from '@/lib/types';
+import { StreamCard } from './stream-card';
+import { FollowButton } from './follow-button';
 export function FollowingFeed() {
-  const { connected, token } = useWallet();
-  const [streams, setStreams] = useState<Stream[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const load = useCallback(async () => {
-    if (!connected) { setStreams([]); return; }
-    setLoading(true);
-    try {
-      if (API_CONFIGURED) setStreams((await apiFetch<{ streams: Stream[] }>("/api/following", {}, token)).streams);
-      else setStreams(demoStreams.filter((stream) => localStorage.getItem(`substream.follow.${stream.market.id}`) === "1"));
-    } catch { setStreams([]); }
-    finally { setLoading(false); }
-  }, [connected, token]);
-
-  useEffect(() => {
-    let active = true;
-    const refresh = () => { if (active) void load(); };
-    queueMicrotask(refresh);
-    window.addEventListener("substream:follow", refresh);
-    return () => { active = false; window.removeEventListener("substream:follow", refresh); };
-  }, [load]);
-
-  if (!connected) return <div className="following-gate"><Bell size={34} /><h2>Your favorite communities, one click away.</h2><p>Connect a wallet, then follow any AQUA coin to build a personal live feed.</p><span>Use <b>Connect wallet</b> in the top-right to get started.</span></div>;
-  if (loading) return <div className="following-gate"><LoaderCircle className="spin" size={30} /><p>Loading your channels…</p></div>;
-  if (!streams.length) return <div className="following-gate"><Radio size={34} /><h2>Nothing followed yet.</h2><p>Follow a live coin and it will appear here whenever the creator starts streaming.</p><Link href="/">Explore live streams <ArrowUpRight size={17} /></Link></div>;
-
-  return <div className="following-grid">{streams.map((stream) => <article className="following-card" key={stream.id}><Link href={`/stream/${stream.slug}`}><div className="stream-thumbnail" style={{ "--stream-color": streamColors[stream.slug] ?? "#21d4e4" } as React.CSSProperties}><div className="broadcast-grid" /><span className="thumbnail-symbol">{stream.market.symbol.slice(0,1)}</span>{stream.status === "live" && <span className="live-chip"><span /> LIVE</span>}<span className="viewer-chip"><Users size={14} /> {stream.viewerCount}</span></div></Link><div><div className="coin-row compact"><span className="coin-dot" style={{ background: streamColors[stream.slug] ?? "#21d4e4" }}>{stream.market.symbol.slice(0,1)}</span><span><strong>{stream.market.symbol}</strong><small>{stream.market.name}</small></span></div><h2><Link href={`/stream/${stream.slug}`}>{stream.title}</Link></h2><p>{stream.description}</p><FollowButton marketId={stream.market.id} initial /></div></article>)}</div>;
+  const { token }=useWallet(); const [streams,setStreams]=useState<Stream[]>([]); const [error,setError]=useState(''); const [loading,setLoading]=useState(true); const [retry,setRetry]=useState(0);
+  useEffect(() => { if(!token)return; let active=true; const load=async()=>{try { const data=await apiFetch<{streams:Stream[]}>('/api/following',{},token); if(active){setStreams(data.streams);setError('');} }catch(e){if(active)setError((e as Error).message);}finally{if(active)setLoading(false);}}; void load(); const timer=setInterval(()=>void load(),30000);window.addEventListener('substream:follow',load);return()=>{active=false;clearInterval(timer);window.removeEventListener('substream:follow',load);};},[token,retry]);
+  if(!token)return <div className="empty-state"><h2>Your followed channels</h2><p>Connect your wallet to see the coins you follow.</p></div>;
+  if(error)return <div className="empty-state"><h2>Could not load your channels</h2><p>{error}</p><button className="soft-button" onClick={()=>setRetry(v=>v+1)}>Try again</button></div>;
+  if(loading)return <div className="empty-state" role="status">Loading your channels…</div>;
+  if(!streams.length)return <div className="empty-state"><h2>No followed channels yet</h2><p>Follow a coin from its stream page. Its channel will stay here, even when offline.</p><Link className="soft-button" href="/">Explore streams</Link></div>;
+  return <div className="stream-grid">{streams.map(stream=><div key={stream.id}><StreamCard stream={stream}/><div style={{marginTop:12}}><FollowButton marketId={stream.market.id} initial/></div></div>)}</div>;
 }

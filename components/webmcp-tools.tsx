@@ -41,21 +41,6 @@ export function WebMcpTools() {
           return { opened: true, slug };
         },
       }, { signal: lifecycle.signal }),
-      context.registerTool({
-        name: "save_stream_reminder",
-        title: "Save stream reminder",
-        description: "Save or remove a reminder for an upcoming Sub Stream schedule on this device.",
-        inputSchema: { type: "object", properties: { scheduleId: { type: "string", minLength: 1, maxLength: 100 }, enabled: { type: "boolean" } }, required: ["scheduleId", "enabled"], additionalProperties: false },
-        annotations: { readOnlyHint: false, untrustedContentHint: false },
-        execute(input) {
-          const values = objectInput(input); const scheduleId = values.scheduleId; const enabled = values.enabled;
-          if (typeof scheduleId !== "string" || !scheduleId.trim() || scheduleId.length > 100 || typeof enabled !== "boolean") throw new Error("Provide a scheduleId and enabled state.");
-          const key = `substream.reminder.${scheduleId}`;
-          if (enabled) localStorage.setItem(key, "1"); else localStorage.removeItem(key);
-          window.dispatchEvent(new CustomEvent("substream:reminder", { detail: { scheduleId, enabled } }));
-          return { scheduleId, reminderSaved: enabled };
-        },
-      }, { signal: lifecycle.signal }),
     ];
     registrations.forEach((registration) => void Promise.resolve(registration).catch(report));
     return () => lifecycle.abort();
