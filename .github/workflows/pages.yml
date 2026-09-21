@@ -14,7 +14,8 @@ jobs:
     timeout-minutes: 15
     env:
       API_BASE_URL: ${{ vars.API_BASE_URL }}
-      PAGES_BASE_PATH: /SubStreamFrontend/
+      # The custom domain serves this application at its root.
+      PAGES_BASE_PATH: /
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
