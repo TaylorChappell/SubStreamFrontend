@@ -25,7 +25,7 @@ export function AppHeader() {
       <button className="header-search" onClick={()=>setOpen(true)} aria-label="Search coins, channels and categories"><Search size={18}/><span>Search coins, channels, categories</span><kbd>Ctrl K</kbd></button>
       <div className="header-actions"><Link className="go-live-button" href="/go-live"><span className="broadcast-dot"/>Go Live</Link><WalletButton/></div>
     </header>
-    <Dialog open={open} onOpenChange={setOpen}><DialogContent className="search-dialog">
+    <Dialog open={open} onOpenChange={setOpen}><DialogContent placement="top" className="search-dialog">
       <DialogTitle className="sr-only">Search Sub Stream</DialogTitle><DialogDescription className="sr-only">Find coins, live and offline channels, or browse a category.</DialogDescription>
       <div className="search-field"><Search size={21}/><input aria-label="Search Sub Stream" placeholder="Find your community…" maxLength={80} value={query} onChange={e=>setQuery(e.target.value)}/>{query&&<button onClick={()=>setQuery('')}>Clear</button>}</div>
       <div className="search-results" aria-live="polite"><div className="search-section-heading"><span>{query?'Channels':'Live & recently active'}</span><small>Live and offline</small></div>
