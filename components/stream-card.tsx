@@ -1,6 +1,13 @@
+import { useState } from 'react';
 import Link from '@/lib/navigation';
-import { Users, Video } from 'lucide-react';
+import { categoryLabel,relativeTime,CATEGORIES } from '@/lib/categories';
 import type { Stream } from '@/lib/types';
-export function StreamCard({ stream }: { stream: Stream }) {
-  return <Link href={`/stream/${stream.slug}`} className="stream-card"><div className="stream-thumbnail">{stream.thumbnailUrl ? <img src={stream.thumbnailUrl} alt=""/> : <div className="thumbnail-placeholder"><Video size={28}/><span>{stream.market.name}</span></div>}{stream.status === 'live' && <><span className="live-chip">LIVE</span><span className="viewer-chip"><Users size={14}/>{stream.viewerCount}</span></>}</div><div className="stream-card-body"><div className="coin-row compact">{stream.market.imageUrl ? <img className="coin-dot" src={stream.market.imageUrl} alt=""/> : <span className="coin-dot">{stream.market.symbol.slice(0,1)}</span>}<div><strong>{stream.market.symbol}</strong><small>{stream.market.name} · {stream.category}</small></div></div><h3>{stream.title}</h3><div className="card-stats"><span>{stream.status === 'live' ? 'Live now' : 'Offline'}</span><span>{stream.market.rewardMode.replaceAll('_', ' ')}</span></div></div></Link>;
+import { CoinAvatar } from './coin-avatar';
+export function StreamCard({stream}:{stream:Stream}) {
+  const [failed,setFailed]=useState(false);const live=stream.status==='live';
+  const category=CATEGORIES.find(c=>c.name===stream.category)?.id||'community';
+  return <Link href={`/stream/${stream.slug}`} className={`stream-card ${live?'is-live':''}`}><div className={`stream-thumbnail category-${category}`}>
+    {stream.thumbnailUrl&&!failed?<img src={stream.thumbnailUrl} alt="" loading="lazy" onError={()=>setFailed(true)}/>:<div className="channel-cover"><span>{stream.market.symbol}</span><small>{stream.market.name}</small><div className="cover-rings"/></div>}
+    <span className={live?'live-chip':'offline-chip'}>{live?'LIVE':'OFFLINE'}</span><span className="viewer-chip">{live?`${stream.viewerCount} watching`:stream.lastLiveAt?`Last live ${relativeTime(stream.lastLiveAt)}`:'No broadcasts yet'}</span><span className="thumbnail-open">{live?'Join stream':'Visit channel'} ↗</span>
+  </div><div className="stream-card-body"><CoinAvatar symbol={stream.market.symbol} src={stream.market.imageUrl}/><div><h3>{stream.title}</h3><p>{stream.market.name} <span>· {stream.market.symbol}</span></p><small>{categoryLabel(stream.category)}</small></div></div></Link>;
 }

@@ -1,221 +1,45 @@
-"use client";
-
+import { useState,type FormEvent } from 'react';
+import { toast } from 'sonner';
 import Link from '@/lib/navigation';
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarPlus, Check, Clipboard, Eye, KeyRound, LoaderCircle, Radio, RefreshCw, Satellite, ShieldCheck, Sparkles, Square, Video } from "lucide-react";
-import { toast } from "sonner";
-import { useWallet } from "@/app/providers";
-import { apiFetch } from "@/lib/api";
-import { StudioManagement } from "./studio-management";
-
-interface CreatorMarket {
-  id: string;
-  name: string;
-  symbol: string;
-  mint: string;
-  imageUrl?: string | null;
-  marketCapUsd: number;
-  priceUsd: number;
-  aquaUrl: string;
-  streamId?: string | null;
-  streamStatus?: string | null;
-  streamTitle?: string | null;
-  slug?: string | null;
-  viewerCount?: number;
-}
-
-interface CreatorChannel {
-  id: string;
-  marketId: string;
-  marketName: string;
-  symbol: string;
-  slug: string;
-  title: string;
-  description: string;
-  category: string;
-  status: "offline" | "scheduled" | "live" | "errored";
-  viewerCount: number;
-  lastError?: string | null;
-}
-
-interface Credentials { server: string; streamKey: string; }
-
-
-function mapMarket(row: Record<string, unknown>): CreatorMarket {
-  return {
-    id: String(row.id), name: String(row.name), symbol: String(row.symbol), mint: String(row.mint),
-    imageUrl: row.image_url ? String(row.image_url) : null,
-    marketCapUsd: Number(row.market_cap_usd ?? 0), priceUsd: Number(row.price_usd ?? 0), aquaUrl: String(row.aqua_url ?? "#"),
-    streamId: row.stream_id ? String(row.stream_id) : null, streamStatus: row.stream_status ? String(row.stream_status) : null,
-    streamTitle: row.stream_title ? String(row.stream_title) : null, slug: row.slug ? String(row.slug) : null, viewerCount: Number(row.viewer_count ?? 0),
-  };
-}
-
-function mapChannel(row: Record<string, unknown>): CreatorChannel {
-  return {
-    id: String(row.id), marketId: String(row.market_id), marketName: String(row.market_name), symbol: String(row.symbol), slug: String(row.slug),
-    title: String(row.title), description: String(row.description ?? ""), category: String(row.category ?? "Community"),
-    status: row.status as CreatorChannel["status"], viewerCount: Number(row.viewer_count ?? 0), lastError: row.last_error ? String(row.last_error) : null,
-  };
-}
-
-function money(value: number) { return value >= 1000 ? `$${Math.round(value / 1000)}K` : `$${Math.round(value)}`; }
-function shortMint(value: string) { return `${value.slice(0, 5)}…${value.slice(-5)}`; }
-
+import { useWallet } from '@/app/providers';
+import { apiFetch } from '@/lib/api';
+import { CATEGORIES,relativeTime } from '@/lib/categories';
+import { useCreatorData,type CreatorChannel,type Credentials } from '@/lib/creator';
+import { CreatorGate } from './creator-gate';
+import { CoinAvatar } from './coin-avatar';
+import { BroadcastCredentials } from './broadcast-credentials';
+import { StudioManagement } from './studio-management';
+import { BroadcastHistory } from './broadcast-history';
 export function CreatorStudio() {
-  const { connected, wallet, token } = useWallet();
-  const [markets, setMarkets] = useState<CreatorMarket[]>([]);
-  const [channels, setChannels] = useState<CreatorChannel[]>([]);
-  const [selectedId, setSelectedId] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [loadError,setLoadError]=useState("");
-  const [credentials, setCredentials] = useState<Credentials | null>(null);
-  const [credentialsVisible, setCredentialsVisible] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Community");
-  const [announcement, setAnnouncement] = useState("");
-  const [scheduleAt, setScheduleAt] = useState("");
-
-  useEffect(() => { setCredentials(null); setCredentialsVisible(false); }, [token]);
-
-  const load = useCallback(async () => {
-    if (!connected || !token) { setMarkets([]); setChannels([]); setCredentials(null); return; }
-    setLoading(true);
-    try {
-      const [marketResponse, streamResponse] = await Promise.all([
-        apiFetch<{ markets: Array<Record<string, unknown>> }>("/api/creator/markets", {}, token),
-        apiFetch<{ streams: Array<Record<string, unknown>> }>("/api/creator/streams", {}, token),
-      ]);
-      const nextMarkets = marketResponse.markets.map(mapMarket);
-      const nextChannels = streamResponse.streams.map(mapChannel);
-      setMarkets(nextMarkets); setChannels(nextChannels); setLoadError("");
-      setSelectedId(current => nextChannels.some(c => c.id === current) ? current : nextChannels[0]?.id ?? "");
-    } catch (error) { setLoadError(error instanceof Error ? error.message : "Could not load creator studio"); }
-    finally { setLoading(false); }
-  }, [connected, token]);
-
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => { if (active) void load(); });
-    const timer = setInterval(() => { if (active) void load(); }, 30000);
-    return () => { active = false; clearInterval(timer); };
-  }, [load]);
-
-  const selected = useMemo(() => channels.find((channel) => channel.id === selectedId) ?? channels[0] ?? null, [channels, selectedId]);
-  useEffect(() => {
-    if (!selected) return;
-    const channel = selected;
-    queueMicrotask(() => { setTitle(channel.title); setDescription(channel.description); setCategory(channel.category); setCredentials(null); setCredentialsVisible(false); });
-  }, [selected?.id]);
-
-  const requireWallet = () => {
-    if (connected) return true;
-    toast.error("Connect the creator wallet to manage a channel.");
-    return false;
-  };
-
-  const createChannel = async (market: CreatorMarket) => {
-    if (!requireWallet()) return;
-    setSaving(true);
-    try {
-      {
-        const response = await apiFetch<{ stream: { id: string; slug: string; title: string; status: CreatorChannel["status"] } }>("/api/creator/streams", { method: "POST", body: JSON.stringify({ marketId: market.id, title: `${market.symbol} community live`, description: `Live updates and holder questions from ${market.name}.`, category: "Community" }) }, token);
-        await load(); setSelectedId(response.stream.id);
-      }
-      toast.success("Channel created. Your private broadcast key is ready.");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not create channel"); }
-    finally { setSaving(false); }
-  };
-
-  const saveChannel = async (event: FormEvent) => {
-    event.preventDefault(); if (!selected || !requireWallet()) return; setSaving(true);
-    try {
-      await apiFetch(`/api/creator/streams/${selected.id}`, { method: "PATCH", body: JSON.stringify({ title, description, category }) }, token);
-      setChannels((items) => items.map((item) => item.id === selected.id ? { ...item, title, description, category } : item));
-      toast.success("Channel details saved");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save channel"); }
-    finally { setSaving(false); }
-  };
-
-  const revealCredentials = async () => {
-    if (!selected || !requireWallet()) return; setSaving(true);
-    try {
-      const next = (await apiFetch<{ credentials: Credentials }>(`/api/creator/streams/${selected.id}/credentials`, {}, token)).credentials;
-      setCredentials(next); setCredentialsVisible(true);
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not load broadcast key"); }
-    finally { setSaving(false); }
-  };
-
-  const rotateKey = async () => {
-    if (!selected || !requireWallet()) return; if (!window.confirm("Rotate this stream key? OBS will disconnect and the old key will stop working.")) return; setSaving(true);
-    try {
-      const next = (await apiFetch<{ credentials: Credentials }>(`/api/creator/streams/${selected.id}/rotate-key`, { method: "POST" }, token)).credentials;
-      setCredentials(next); setCredentialsVisible(true); toast.success("Stream key rotated. Update OBS before going live.");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not rotate stream key"); }
-    finally { setSaving(false); }
-  };
-
-  const publishAnnouncement = async () => {
-    if (!selected || !announcement.trim() || !requireWallet()) return;
-    try {
-      await apiFetch(`/api/creator/streams/${selected.id}/announcement`, { method: "PUT", body: JSON.stringify({ body: announcement.trim() }) }, token);
-      toast.success("Announcement published to the live room");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not publish announcement"); }
-  };
-
-  const scheduleStream = async () => {
-    if (!selected || !scheduleAt || !requireWallet()) return toast.error("Choose a future date and time.");
-    const scheduledFor = new Date(scheduleAt).getTime();
-    if (!Number.isFinite(scheduledFor) || scheduledFor < Date.now() + 5 * 60_000) return toast.error("Schedule at least five minutes from now.");
-    try {
-      await apiFetch("/api/creator/schedules", { method: "POST", body: JSON.stringify({ marketId: selected.marketId, streamId: selected.id, title: selected.title, description: selected.description, scheduledFor, durationMinutes: 60 }) }, token);
-      toast.success("Stream added to the public schedule"); setScheduleAt("");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not schedule stream"); }
-  };
-
-  const endStream = async () => {
-    if (!selected || !requireWallet()) return;
-    if (!window.confirm("End this broadcast? Stop OBS before enabling it again.")) return;
-    try {
-      await apiFetch(`/api/creator/streams/${selected.id}/end`, { method: "POST" }, token);
-      setChannels((items) => items.map((item) => item.id === selected.id ? { ...item, status: "offline", viewerCount: 0 } : item)); toast.success("Broadcast ended");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not end broadcast"); }
-  };
-
-  const copy = async (value: string, label: string) => { await navigator.clipboard.writeText(value); toast.success(`${label} copied`); };
-
-  return <div className="studio-layout">
-    <aside className="studio-sidebar">
-      <div className="studio-sidebar-heading"><div><p className="eyebrow quiet">Your AQUA coins</p><h2>Channels</h2></div>{loading && <LoaderCircle className="spin" size={18} />}</div>
-      <div className="channel-list">
-        {channels.map((channel) => <button type="button" key={channel.id} className={selected?.id === channel.id ? "active" : ""} onClick={() => setSelectedId(channel.id)}><span className="schedule-symbol">{channel.symbol.slice(0, 1)}</span><span><b>{channel.symbol}</b><small>{channel.title}</small></span><i className={channel.status}>{channel.status}</i></button>)}
-        {!channels.length && <p className="empty-copy">No channels yet. Choose a verified coin below.</p>}
-      </div>
-      <div className="unclaimed-list"><p>Ready for a channel</p>{markets.filter((market) => !channels.some((channel) => channel.marketId === market.id)).map((market) => <div key={market.id}><span><b>{market.symbol}</b><small>{money(market.marketCapUsd)} market cap</small></span><button type="button" disabled={saving} onClick={() => void createChannel(market)}>Create</button></div>)}</div>
-      <div className="verification-note"><ShieldCheck size={18} /><p><b>Creator-verified</b><br />Channels can only be created by the wallet recorded by AQUA.</p></div>
-    </aside>
-
-    <section className="studio-workspace">{loadError && <div className="schedule-empty" role="alert"><p>{loadError}</p><button className="soft-button" onClick={() => void load()}>Try again</button></div>}
-      {!connected && <div className="studio-gate"><div><p className="eyebrow">Creator access</p><h1>Connect the wallet that launched your coin.</h1><p>Sub Stream checks the creator address imported from AQUA before it exposes keys, schedules, or moderation controls.</p></div><span><KeyRound size={26} /> Use the wallet button above to sign in</span></div>}
-      {connected && selected ? <>
-        <div className="studio-hero"><div><div className="studio-status"><span className={`status-dot ${selected.status}`} /> {selected.status === "live" ? `${selected.viewerCount} watching now` : "Channel offline"}</div><h1>{selected.symbol} creator studio</h1><p>{selected.title}</p></div><div className="studio-hero-actions">{selected.status === "live" && <Link href={`/stream/${selected.slug}`}><Eye size={17} /> View live room</Link>}<button type="button" onClick={() => void revealCredentials()} disabled={saving || !connected}><Satellite size={17} /> Broadcast setup</button>{selected.status === "live" && <button className="danger" type="button" onClick={() => void endStream()}><Square size={15} /> End stream</button>}</div></div>
-
-        <div className="studio-metrics"><article><small>Status</small><b>{selected.status}</b><span>Updates automatically from the ingest provider</span></article><article><small>Live viewers</small><b>{selected.viewerCount}</b><span>Active sessions in the last 45 seconds</span></article><article><small>Chat access</small><b>Holders only</b><span>Balances rechecked every 60 seconds</span></article></div>
-
-        <div className="studio-grid">
-          <form className="studio-card" onSubmit={saveChannel}><div className="studio-card-heading"><span><Video size={18} /></span><div><h2>Channel details</h2><p>What viewers see on Explore and in your live room.</p></div></div><label>Stream title<input value={title} onChange={(event) => setTitle(event.target.value)} minLength={3} maxLength={100} required /></label><label>Description<textarea value={description} onChange={(event) => setDescription(event.target.value)} maxLength={500} rows={4} /></label><label>Category<select value={category} onChange={(event) => setCategory(event.target.value)}><option>Community</option><option>Development</option><option>AMA</option><option>Art</option><option>Gaming</option><option>Education</option></select></label><button className="primary-action" type="submit" disabled={saving || !connected}>{saving ? <LoaderCircle className="spin" size={16} /> : <Check size={16} />} Save details</button></form>
-
-          <div className="studio-card"><div className="studio-card-heading"><span><Radio size={18} /></span><div><h2>Broadcast key</h2><p>Paste these values into OBS or Streamlabs.</p></div></div>{credentials ? <div className="credentials"><label>Server<div><input readOnly value={credentials.server} /><button type="button" aria-label="Copy server" onClick={() => void copy(credentials.server, "Server")}><Clipboard size={16} /></button></div></label><label>Stream key<div><input readOnly type={credentialsVisible ? "text" : "password"} value={credentials.streamKey} /><button type="button" aria-label="Copy stream key" onClick={() => void copy(credentials.streamKey, "Stream key")}><Clipboard size={16} /></button></div></label><p>Keep this key private. Anyone with it can broadcast to your channel.</p><div className="inline-actions"><button type="button" onClick={() => setCredentialsVisible((value) => !value)}><Eye size={15} /> {credentialsVisible ? "Hide key" : "Show key"}</button><button type="button" onClick={() => void rotateKey()} disabled={saving}><RefreshCw size={15} /> Rotate key</button></div></div> : <div className="credential-empty"><KeyRound size={28} /><p>Credentials stay hidden until you request them from an authenticated creator session.</p><button type="button" onClick={() => void revealCredentials()} disabled={saving || !connected}>Reveal credentials</button></div>}</div>
-
-          <div className="studio-card"><div className="studio-card-heading"><span><Sparkles size={18} /></span><div><h2>Live announcement</h2><p>Pin an update above chat for everyone watching.</p></div></div><label>Message<textarea rows={4} value={announcement} onChange={(event) => setAnnouncement(event.target.value)} maxLength={280} /></label><div className="character-count">{announcement.length}/280</div><button className="primary-action secondary" type="button" disabled={!connected || !announcement.trim()} onClick={() => void publishAnnouncement()}>Publish announcement</button></div>
-
-          <div className="studio-card"><div className="studio-card-heading"><span><CalendarPlus size={18} /></span><div><h2>Schedule the next stream</h2><p>Appear on the public calendar before you go live.</p></div></div><label>Date and time<input type="datetime-local" value={scheduleAt} onChange={(event) => setScheduleAt(event.target.value)} /></label><div className="schedule-preview"><CalendarPlus size={20} /><span><b>{scheduleAt ? new Date(scheduleAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "Choose a time"}</b><small>Default duration: 60 minutes</small></span></div><button className="primary-action secondary" type="button" disabled={!connected || !scheduleAt} onClick={() => void scheduleStream()}>Add to schedule</button></div>
-        </div>
-        <StudioManagement streamId={selected.id} token={token!} onRefresh={load}/>
-      </> : connected && <div className="studio-empty"><Video size={34} /><h1>Create your first channel</h1><p>No channels found. Coins launched by this wallet appear on the left after the next AQUA sync.</p></div>}
-      <div className="studio-footnote"><span>Signed in as</span><code>{wallet ? shortMint(wallet) : "wallet not connected"}</code>{connected && <span>· Authenticated API session</span>}</div>
-    </section>
-  </div>;
+  const {token,wallet}=useWallet();
+  return token?<StudioWorkspace key={wallet} token={token}/>:<CreatorGate/>;
+}
+function StudioWorkspace({token}:{token:string}) {
+  const {markets,channels,loading,error,reload}=useCreatorData(token);
+  const [selected,setSelected]=useState(''),[query,setQuery]=useState('');
+  const market=markets.find(m=>m.id===selected)||markets[0];const channel=channels.find(c=>c.market_id===market?.id);
+  return <><div className="page-title-row"><div><p className="kicker">YOUR CHANNELS, YOUR WAY</p><h1>Creator studio</h1><p>Make a home for every coin you create.</p></div><Link className="go-live-button" href={market?`/go-live/${encodeURIComponent(market.id)}`:'/go-live'}><span className="broadcast-dot"/>Go Live</Link></div>
+    {error?<div className="empty-state" role="alert"><p>{error}</p><button className="soft-button" onClick={()=>void reload()}>Try again</button></div>:loading&&!markets.length?<div className="empty-state">Loading your studio…</div>:!markets.length?<div className="empty-state"><h2>Your channels start with your coins.</h2><p>No AQUA coins were found for this wallet. Connect the wallet that created your coin, or check again after it has synced.</p><button className="soft-button" onClick={()=>void reload()}>Check again</button></div>:<div className="studio-layout"><aside className="studio-coin-list"><div><h2>Your coins <span>{markets.length}</span></h2><input aria-label="Search creator coins" placeholder="Find a coin…" value={query} onChange={e=>setQuery(e.target.value)}/></div>{markets.filter(m=>`${m.name} ${m.symbol}`.toLowerCase().includes(query.toLowerCase())).map(m=><button key={m.id} className={m.id===market?.id?'selected':''} onClick={()=>setSelected(m.id)}><CoinAvatar src={m.image_url} symbol={m.symbol}/><span><b>{m.symbol}</b><small>{m.name}</small></span>{m.stream_status==='live'&&<i className="nav-live-dot"/>}</button>)}<button className="studio-refresh" onClick={()=>void reload()} disabled={loading}>{loading?'Checking…':'Refresh coins'}</button></aside><div className="studio-workspace">
+      {channel?<ChannelWorkspace key={channel.id} channel={channel} token={token} reload={reload}/>:<div className="new-channel"><CoinAvatar src={market?.image_url} symbol={market?.symbol||''} size="large"/><p className="kicker">{market?.name}</p><h2>Give {market?.symbol} a place to go live.</h2><p>Set your first title and category. We’ll prepare a channel and your private broadcast keys.</p><Link className="primary-action" href={`/go-live/${encodeURIComponent(market!.id)}`}>Set up this channel →</Link></div>}
+    </div></div>}
+  </>;
+}
+function ChannelWorkspace({channel,token,reload}:{channel:CreatorChannel;token:string;reload:()=>Promise<void>}) {
+  const [tab,setTab]=useState('Overview'),[busy,setBusy]=useState(false),[title,setTitle]=useState(channel.title),[description,setDescription]=useState(channel.description),[category,setCategory]=useState(channel.category),[thumbnail,setThumbnail]=useState(channel.thumbnail_url||''),[announcement,setAnnouncement]=useState(''),[credentials,setCredentials]=useState<Credentials|null>(null),[error,setError]=useState('');
+  const [scheduleTitle,setScheduleTitle]=useState(''),[scheduleDescription,setScheduleDescription]=useState(''),[scheduleAt,setScheduleAt]=useState(''),[duration,setDuration]=useState('60'),[revision,setRevision]=useState(0);
+  async function act(fn:()=>Promise<void>,message?:string){setBusy(true);setError('');try{await fn();if(message)toast.success(message);}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  async function save(e:FormEvent){e.preventDefault();await act(async()=>{await apiFetch(`/api/creator/streams/${channel.id}`,{method:'PATCH',body:JSON.stringify({title,description,category,thumbnailUrl:thumbnail.trim()||null})},token);await reload();},'Channel saved');}
+  async function schedule(e:FormEvent){e.preventDefault();const when=new Date(scheduleAt).getTime();if(!Number.isFinite(when)||when<Date.now()+300000){setError('Choose a time at least five minutes from now.');return;}await act(async()=>{await apiFetch('/api/creator/schedules',{method:'POST',body:JSON.stringify({marketId:channel.market_id,streamId:channel.id,title:scheduleTitle,description:scheduleDescription,scheduledFor:when,durationMinutes:Number(duration)})},token);setScheduleTitle('');setScheduleDescription('');setScheduleAt('');setRevision(v=>v+1);},'Broadcast scheduled');}
+  const live=channel.status==='live';
+  return <><div className="studio-channel-heading"><CoinAvatar src={channel.image_url} symbol={channel.symbol} size="large"/><div><span className={`status-label ${live?'is-live':''}`}>{live?'● Live now':'Offline'}</span><h2>{channel.market_name}</h2><p>{channel.symbol} / {channel.slug}</p></div><Link className="soft-button" href={`/stream/${channel.slug}`}>View channel ↗</Link></div>
+    <nav className="studio-tabs" aria-label="Channel settings">{['Overview','Stream details','Broadcast keys','Schedule','Moderation'].map(name=><button key={name} aria-current={tab===name?'page':undefined} className={tab===name?'active':''} onClick={()=>{setTab(name);setCredentials(null);setError('');}}>{name}</button>)}</nav>
+    {error&&<p className="form-error" role="alert">{error}</p>}
+    <div className="studio-tab-content" key={tab}>
+    {tab==='Overview'&&<><div className="studio-overview"><div><span className="small-label">CURRENT BROADCAST</span><h3>{channel.title}</h3><p>{CATEGORIES.find(c=>c.name===channel.category)?.label||channel.category}</p><Link className="go-live-button" href={`/go-live/${encodeURIComponent(channel.market_id)}`}><span className="broadcast-dot"/>{live?'Manage broadcast':'Go Live'}</Link>{live&&<button className="danger-button" disabled={busy} onClick={()=>{if(window.confirm('End this broadcast? Viewers will see your channel as offline.'))void act(async()=>{await apiFetch(`/api/creator/streams/${channel.id}/end`,{method:'POST'},token);await reload();},'Broadcast ended');}}>End stream</button>}</div><dl><div><dt>Watching now</dt><dd>{live?channel.viewer_count:0}</dd></div><div><dt>Last broadcast</dt><dd>{channel.live_started_at?relativeTime(Number(channel.live_started_at)):'Not yet'}</dd></div></dl></div>{channel.last_error&&<p className="form-error">Broadcast issue: {channel.last_error}</p>}<form className="studio-form announcement-form" onSubmit={e=>{e.preventDefault();void act(async()=>{await apiFetch(`/api/creator/streams/${channel.id}/announcement`,{method:'PUT',body:JSON.stringify({body:announcement})},token);setAnnouncement('');},'Announcement published');}}><div className="panel-heading"><h3>Say something to your community</h3><p>Pin an announcement below your stream.</p></div><label>Announcement<textarea rows={2} maxLength={280} required value={announcement} onChange={e=>setAnnouncement(e.target.value)} placeholder="Share an update, a link or what’s coming next."/></label><div className="form-actions"><button className="text-link" type="button" disabled={busy} onClick={()=>void act(async()=>{await apiFetch(`/api/creator/streams/${channel.id}/announcement`,{method:'DELETE'},token);},'Announcement removed')}>Remove current</button><button className="primary-action" disabled={busy||!announcement.trim()}>Publish</button></div></form><BroadcastHistory slug={channel.slug}/></>}
+    {tab==='Stream details'&&<form className="studio-form" onSubmit={save}><div className="panel-heading"><h3>Make the channel yours.</h3><p>Set the details viewers see when they find your coin.</p></div><label>Stream title<input value={title} required minLength={3} maxLength={100} onChange={e=>setTitle(e.target.value)}/></label><label>Description<textarea rows={4} value={description} maxLength={500} onChange={e=>setDescription(e.target.value)}/></label><label>Category<select value={category} onChange={e=>setCategory(e.target.value)}>{!CATEGORIES.some(c=>c.name===category)&&<option>{category}</option>}{CATEGORIES.map(c=><option key={c.id} value={c.name}>{c.label} · {c.short}</option>)}</select></label><label>Channel cover URL <span className="optional">Optional</span><input type="url" maxLength={500} value={thumbnail} onChange={e=>setThumbnail(e.target.value)} placeholder="https://…"/><span className="field-hint">A public image URL. A wide 16:9 image works best.</span></label><div className="form-actions"><span>Changes apply to this coin only.</span><button className="primary-action" disabled={busy}>{busy?'Saving…':'Save changes'}</button></div></form>}
+    {tab==='Broadcast keys'&&<><div className="panel-heading"><h3>Connect your broadcasting software.</h3><p>Use OBS → Settings → Stream → Custom. Your keys stay the same between broadcasts.</p></div>{credentials?<BroadcastCredentials credentials={credentials}/>:<button className="primary-action" disabled={busy} onClick={()=>void act(async()=>{const d=await apiFetch<{credentials:Credentials}>(`/api/creator/streams/${channel.id}/credentials`,{},token);setCredentials(d.credentials);})}>{busy?'Loading…':'Reveal broadcast keys'}</button>}<div className="key-help"><h3>Need a new key?</h3><p>Resetting revokes the old key and disconnects an active broadcast. Update OBS with the replacement.</p><button className="danger-button" disabled={busy} onClick={()=>{if(window.confirm('Reset this stream key? The old key will stop working immediately.'))void act(async()=>{const d=await apiFetch<{credentials:Credentials}>(`/api/creator/streams/${channel.id}/rotate-key`,{method:'POST'},token);setCredentials(d.credentials);},'Stream key reset');}}>Reset stream key</button></div></>}
+    {tab==='Schedule'&&<><form className="studio-form" onSubmit={schedule}><div className="panel-heading"><h3>Give your community a heads-up.</h3><p>Scheduled broadcasts appear on the public schedule.</p></div><label>Broadcast title<input required minLength={3} maxLength={100} value={scheduleTitle} onChange={e=>setScheduleTitle(e.target.value)} placeholder="What’s coming up?"/></label><label>Description<textarea rows={2} maxLength={500} value={scheduleDescription} onChange={e=>setScheduleDescription(e.target.value)}/></label><div className="form-columns"><label>When <span className="field-hint">Your local time</span><input required type="datetime-local" value={scheduleAt} onChange={e=>setScheduleAt(e.target.value)}/></label><label>Length<select value={duration} onChange={e=>setDuration(e.target.value)}>{[30,60,90,120,180].map(n=><option key={n} value={n}>{n} minutes</option>)}</select></label></div><button className="primary-action" disabled={busy}>{busy?'Scheduling…':'Schedule broadcast'}</button></form><StudioManagement key={revision} streamId={channel.id} token={token} onRefresh={reload} view="schedule"/></>}
+    {tab==='Moderation'&&<StudioManagement streamId={channel.id} token={token} onRefresh={reload} view="moderation"/>}
+    </div>
+  </>;
 }

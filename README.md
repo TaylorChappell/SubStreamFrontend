@@ -4,6 +4,14 @@ Standalone React + Vite frontend for Sub Stream. Custom AQUA light interface, re
 
 **Production URL:** https://taylorchappell.github.io/SubStreamFrontend/
 
+## Browse and broadcast
+
+- Browse has a persistent sidebar, category covers, live channels and upcoming broadcasts. `/categories` opens category pages; `/channels` includes live and offline channels with search, sorting and pagination.
+- Header search finds coin names, symbols, stream titles and mint addresses across live and offline channels. Last-live dates and channel broadcast history come from the backend; history is an activity log, not a replay library.
+- `/studio` manages each creator coin separately: overview, stream details/cover, private broadcast keys, schedules and moderation.
+- `/go-live` guides creators through coin selection, title/description/category, and OBS credentials. The input is enabled before showing the keys. Start OBS, then press Go Live to open the channel. Live status is confirmed by Cloudflare, never set optimistically by the browser.
+- Deploy the matching backend version first for `/api/channels`, `/api/categories`, channel history and the authenticated broadcast-start endpoint. No new environment variables are needed.
+
 ## Deploy on GitHub Pages
 
 The workflow in `.github/workflows/pages.yml` installs the locked dependencies, runs tests, builds the app, checks the static artifact, and deploys `dist/` whenever `main` changes. You can rerun it from Actions → Build and deploy Sub Stream → Run workflow.

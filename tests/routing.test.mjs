@@ -4,12 +4,12 @@ import {routeHref,readRoute,matchRoute,channelUrl,assetUrl} from '../lib/paths.t
 import {normalizeApiUrl,configUrl} from '../lib/config.ts';
 const base='https://taylorchappell.github.io/SubStreamFrontend/';
 test('all public routes survive a copied hash link or refresh',()=>{
- for(const [path,page] of [['/','home'],['/following','following'],['/studio','studio'],['/schedule','schedule'],['/privacy','privacy'],['/terms','terms'],['/stream/aqua-coin','stream']]){
+ for(const [path,page] of [['/','home'],['/channels','channels'],['/categories','categories'],['/category/development','category'],['/go-live','go-live'],['/go-live/coin-123','go-live'],['/following','following'],['/studio','studio'],['/schedule','schedule'],['/privacy','privacy'],['/terms','terms'],['/stream/aqua-coin','stream']]){
   const url=new URL(routeHref(path),base);assert.equal(url.pathname,'/SubStreamFrontend/');assert.equal(matchRoute(readRoute(url.hash)).page,page);
  }
 });
 test('unknown and malformed routes are not mistaken for streams',()=>{
- for(const path of ['/missing','/stream/','/stream/%zz','/stream/a/b','/stream/%2F'])assert.equal(matchRoute(path).page,'missing');
+ for(const path of ['/missing','/stream/','/stream/%zz','/stream/a/b','/stream/%2F','/category/missing','/go-live/%2F','/go-live/%zz'])assert.equal(matchRoute(path).page,'missing');
  assert.equal(readRoute('#/schedule/'),'/schedule');assert.equal(readRoute('#/studio?tab=keys'),'/studio');
  assert.throws(()=>routeHref('//outside.test'));assert.throws(()=>routeHref('javascript:alert(1)'));
 });

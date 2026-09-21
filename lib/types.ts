@@ -24,6 +24,7 @@ export interface Stream {
   status: "offline" | "scheduled" | "live" | "errored";
   viewerCount: number;
   liveStartedAt: number | null;
+  lastLiveAt?: number | null;
   playerUrl?: string | null;
   provider: "cloudflare" | "demo";
   market: Market;
