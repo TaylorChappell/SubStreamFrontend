@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/lib/navigation';
 import { apiFetch } from '@/lib/api';
 import type { Schedule } from '@/lib/types';
 import { ReminderButton } from './reminder-button';

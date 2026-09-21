@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { assetUrl } from "@/lib/paths";
+import Link from '@/lib/navigation';
+import { usePathname, useRouter } from '@/lib/navigation';
 import { useEffect, useState } from "react";
 import { Compass, Heart, Radio, Search, Video } from "lucide-react";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -23,7 +23,7 @@ export function AppHeader() {
   const navigate = (path: string) => { setSearchOpen(false); router.push(path); };
   return <>
     <header className="site-header">
-      <Link href="/" className="brand" aria-label="Sub Stream home"><Image src="/sub-stream-mark.png" alt="" width={48} height={48} priority /><span>SUB <b>STREAM</b></span></Link>
+      <Link href="/" className="brand" aria-label="Sub Stream home"><img src={assetUrl("sub-stream-mark.png")} alt="" width={48} height={48} /><span>SUB <b>STREAM</b></span></Link>
       <nav aria-label="Primary navigation">
         <Link className={pathname === "/" ? "nav-active" : ""} href="/">Explore</Link>
         <Link className={pathname.startsWith("/following") ? "nav-active" : ""} href="/following">Following</Link>

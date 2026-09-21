@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/lib/navigation';
 import { Users, Video } from 'lucide-react';
 import type { Stream } from '@/lib/types';
 export function StreamCard({ stream }: { stream: Stream }) {

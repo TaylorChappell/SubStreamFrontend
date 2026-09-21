@@ -1,5 +1,5 @@
 "use client";
-import Link from 'next/link';
+import Link from '@/lib/navigation';
 import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowUpRight, Radio, Users, Video } from 'lucide-react';
 import { apiFetch, ApiError } from '@/lib/api';

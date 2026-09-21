@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from '@/lib/navigation';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Check, Clipboard, Eye, KeyRound, LoaderCircle, Radio, RefreshCw, Satellite, ShieldCheck, Sparkles, Square, Video } from "lucide-react";
 import { toast } from "sonner";

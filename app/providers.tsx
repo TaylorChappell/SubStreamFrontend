@@ -1,6 +1,5 @@
 "use client";
 import { createContext,useCallback,useContext,useEffect,useMemo,useState } from 'react';
-import { ThemeProvider } from 'next-themes';
 import { getWallets } from '@wallet-standard/app';
 import type { StandardConnectFeature,StandardDisconnectFeature,StandardEventsFeature } from '@wallet-standard/features';
 import type { SolanaSignMessageFeature } from '@solana/wallet-standard-features';
@@ -43,4 +42,4 @@ function WalletProvider({children}:{children:React.ReactNode}) {
  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
 }
 export function useWallet(){const value=useContext(WalletContext);if(!value)throw new Error('Wallet provider is missing');return value;}
-export function Providers({children}:{children:React.ReactNode}){return <ThemeProvider attribute="class" forcedTheme="light"><WalletProvider>{children}<WebMcpTools/><Toaster position="bottom-right" richColors/></WalletProvider></ThemeProvider>;}
+export function Providers({children}:{children:React.ReactNode}){return <><WalletProvider>{children}<WebMcpTools/><Toaster position="bottom-right" richColors/></WalletProvider></>;}

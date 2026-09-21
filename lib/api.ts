@@ -1,14 +1,18 @@
+import { configUrl, normalizeApiUrl } from './config.ts';
 let basePromise: Promise<string> | undefined;
 export class ApiError extends Error { status: number; constructor(message: string, status: number) { super(message); this.status = status; } }
 export async function apiBase(): Promise<string> {
-  if (!basePromise) basePromise = fetch('/api/config', { cache: 'no-store' }).then(async response => {
+  if (!basePromise) basePromise = fetch(configUrl(), { cache: 'no-store', signal: AbortSignal.timeout(10000) }).then(async response => {
+    if (!response.ok) throw new ApiError('Cannot load the streaming service configuration.', response.status);
     const config = await response.json() as { apiUrl?: string };
-    if (!config.apiUrl) throw new ApiError('The streaming service has not been connected yet.', 503);
-    return config.apiUrl.replace(/\/$/, '');
+    const url = normalizeApiUrl(config.apiUrl || '');
+    if (!url) throw new ApiError('The streaming service has not been connected yet.', 503);
+    return url;
   }).catch(error => { basePromise = undefined; throw error; });
   return basePromise;
 }
 export async function apiFetch<T>(path: string, init: RequestInit = {}, token?: string | null): Promise<T> {
+  if (!path.startsWith('/api/') && path !== '/health') throw new ApiError('Invalid API path.', 400);
   const base = await apiBase();
   const headers = new Headers(init.headers);
   if (init.body != null) headers.set('content-type', 'application/json');
@@ -23,4 +27,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, token?: 
   }
   return payload as T;
 }
-export async function wsUrl(path: string) { return `${(await apiBase()).replace(/^http/, 'ws')}${path}`; }
+export async function wsUrl(path: string) {
+  if (!path.startsWith('/ws/')) throw new ApiError('Invalid WebSocket path.', 400);
+  return `${(await apiBase()).replace(/^http/, 'ws')}${path}`;
+}

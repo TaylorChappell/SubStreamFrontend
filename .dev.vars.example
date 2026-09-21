@@ -1,2 +1,0 @@
-# Copy to .dev.vars for the local Cloudflare Worker runtime.
-API_BASE_URL=http://localhost:8080
