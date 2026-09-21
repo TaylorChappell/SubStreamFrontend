@@ -2,6 +2,9 @@
 @import "tw-animate-css";
 @import "../vendor/shadcn-tailwind-4.13.0.css";
 
+/* Route changes focus the content for screen readers, not as an input control. */
+main[tabindex="-1"]:focus { outline: none; }
+
 :root {
   --background: #f7fcff;
   --foreground: #123e5a;
