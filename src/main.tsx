@@ -27,12 +27,12 @@ function App(){
   let content:ReactNode;
   switch(route.page){
     case 'home':content=<main className="browse-page"><ExploreFeed/></main>;break;
-    case 'categories':content=<main className="browse-page categories-page"><div className="page-title-row"><div><p className="kicker">FOLLOW YOUR CURIOSITY</p><h1>Find your kind of stream.</h1><p>From a quick catch-up to a late-night build.</p></div></div><CategoryCards/><div className="category-bottom"><p>Looking for a particular coin?</p><Link className="soft-button" href="/channels">Browse all channels ↗</Link></div></main>;break;
+    case 'categories':content=<main className="browse-page categories-page"><div className="page-title-row"><div><h1>Find your kind of stream.</h1><p>From a quick catch-up to a late-night build.</p></div></div><CategoryCards/><div className="category-bottom"><p>Looking for a particular coin?</p><Link className="soft-button" href="/channels">Browse all channels ↗</Link></div></main>;break;
     case 'category':case 'channels':content=<main className="browse-page"><ChannelDirectory key={path} categoryId={route.slug}/></main>;break;
-    case 'following':content=<main className="browse-page"><div className="page-title-row"><div><p className="kicker">YOUR CORNER OF SUB STREAM</p><h1>Following</h1><p>The communities you keep coming back to.</p></div></div><FollowingFeed/></main>;break;
+    case 'following':content=<main className="browse-page"><div className="page-title-row"><div><h1>Following</h1><p>The communities you keep coming back to.</p></div></div><FollowingFeed/></main>;break;
     case 'studio':content=<main className="browse-page studio-page"><CreatorStudio/></main>;break;
     case 'go-live':content=<main className="browse-page"><GoLive key={path} marketId={route.slug}/></main>;break;
-    case 'schedule':content=<main className="browse-page"><div className="page-title-row"><div><p className="kicker">MAKE TIME FOR YOUR COMMUNITY</p><h1>Coming up next</h1><p>All times are shown in your timezone.</p></div><Link className="soft-button" href="/studio">Schedule a broadcast</Link></div><ScheduleList/></main>;break;
+    case 'schedule':content=<main className="browse-page"><div className="page-title-row"><div><h1>Coming up next</h1><p>All times are shown in your timezone.</p></div><Link className="soft-button" href="/studio">Schedule a broadcast</Link></div><ScheduleList/></main>;break;
     case 'privacy':content=<Privacy/>;break;
     case 'terms':content=<Terms/>;break;
     case 'stream':content=<StreamRoom key={route.slug} slug={route.slug!}/>;break;
