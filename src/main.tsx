@@ -27,7 +27,7 @@ function App(){
   let content:ReactNode;
   switch(route.page){
     case 'home':content=<main className="browse-page"><ExploreFeed/></main>;break;
-    case 'categories':content=<main className="browse-page categories-page"><div className="page-title-row"><div><h1>Find your kind of stream.</h1><p>From a quick catch-up to a late-night build.</p></div></div><CategoryCards/><div className="category-bottom"><p>Looking for a particular coin?</p><Link className="soft-button" href="/channels">Browse all channels ↗</Link></div></main>;break;
+    case 'categories':content=<main className="browse-page categories-page"><div className="page-title-row"><div><h1>Categories</h1></div></div><CategoryCards/><Link className="category-directory-link" href="/channels"><span>Browse all channels</span><span aria-hidden="true">→</span></Link></main>;break;
     case 'category':case 'channels':content=<main className="browse-page"><ChannelDirectory key={path} categoryId={route.slug}/></main>;break;
     case 'following':content=<main className="browse-page"><div className="page-title-row"><div><h1>Following</h1><p>The communities you keep coming back to.</p></div></div><FollowingFeed/></main>;break;
     case 'studio':content=<main className="browse-page studio-page"><CreatorStudio/></main>;break;
