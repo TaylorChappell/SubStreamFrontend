@@ -35,9 +35,9 @@ test('WebSockets use the backend origin, never the Pages hostname',async()=>{
  try{const {wsUrl}=await client();assert.equal(await wsUrl('/ws/chat/channel?ticket=example'),'wss://api.test/ws/chat/channel?ticket=example');}finally{globalThis.fetch=original;}
 });
 test('unauthorized responses invalidate the wallet session',async()=>{
- const original=globalThis.fetch;let invalidated=false;const onExpired=()=>{invalidated=true;};window.addEventListener('substream:session-expired',onExpired);
+ const original=globalThis.fetch;let invalidated=false;const onExpired=event=>{invalidated=event.detail.token==='saved-session';};window.addEventListener('substream:session-expired',onExpired);
  globalThis.fetch=async url=>url===config?Response.json({apiUrl:'https://api.test'}):Response.json({error:'Expired'},{status:401});
- try{const {apiFetch}=await client();await assert.rejects(()=>apiFetch('/api/creator/streams'),/Expired/);assert.equal(invalidated,true);}finally{globalThis.fetch=original;window.removeEventListener('substream:session-expired',onExpired);}
+ try{const {apiFetch}=await client();await assert.rejects(()=>apiFetch('/api/creator/streams',{},'saved-session'),/Expired/);assert.equal(invalidated,true);}finally{globalThis.fetch=original;window.removeEventListener('substream:session-expired',onExpired);}
 });
 test('network failures are actionable and API paths cannot change the host',async()=>{
  const original=globalThis.fetch;globalThis.fetch=async url=>{if(url===config)return Response.json({apiUrl:'https://api.test'});throw new Error('offline');};

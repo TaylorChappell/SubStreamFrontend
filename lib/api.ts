@@ -22,7 +22,7 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}, token?: 
   catch (error) { if (init.signal?.aborted) throw error; throw new ApiError('Cannot reach the streaming service. Please try again.', 0); }
   const payload = await response.json().catch(() => ({})) as { error?: string };
   if (!response.ok) {
-    if (response.status === 401) window.dispatchEvent(new Event('substream:session-expired'));
+    if (response.status === 401 && token) window.dispatchEvent(new CustomEvent('substream:session-expired', { detail: { token } }));
     throw new ApiError(payload.error ?? `Request failed (${response.status})`, response.status);
   }
   return payload as T;
